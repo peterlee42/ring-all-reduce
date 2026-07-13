@@ -1,7 +1,63 @@
+#include "shallow_nn.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
-#include "shallow_nn.hpp"
+#include <random>
+
+ShallowNetwork::ShallowNetwork(
+    std::size_t input_dimension,
+    std::size_t hidden_dimension,
+    std::uint32_t seed)
+    : input_dimension_(input_dimension),
+      hidden_dimension_(hidden_dimension),
+      parameters_(hidden_dimension * input_dimension + hidden_dimension + hidden_dimension + 1, 0.0F)
+{
+    std::mt19937 rng(seed);
+
+    const float standard_deviation = std::sqrt(2.0F / static_cast<float>(input_dimension));
+
+    std::normal_distribution<float> dist(0.0F, standard_deviation);
+
+    for (float &param : parameters_)
+    {
+        param = dist(rng);
+    }
+}
+
+float ShallowNetwork::predict_probability(
+    const std::vector<float> &features) const
+{
+    if (features.size() != input_dimension_)
+    {
+        throw std::invalid_argument("Feature dimension mismatch");
+    }
+
+    std::vector<float> z1(hidden_dimension_, 0.0F);
+    std::vector<float> a1(hidden_dimension_, 0.0F);
+
+    for (std::size_t h = 0; h < hidden_dimension_; ++h)
+    {
+        float value = parameters_[b1_index(h)];
+
+        for (std::size_t d = 0; d < input_dimension_; ++d)
+        {
+            value += parameters_[w1_index(h, d)] * features[d];
+        }
+
+        z1[h] = value;
+        a1[h] = value > 0.0F ? value : 0.0F;
+    }
+
+    float output_logit = parameters_[b2_index()];
+
+    for (std::size_t h = 0; h < hidden_dimension_; ++h)
+    {
+        output_logit += parameters_[w2_index(h)] * a1[h];
+    }
+
+    return 1.0F / (1.0F + std::exp(-output_logit));
+}
 
 TrainingStatistics ShallowNetwork::compute_training_statistics(
     const Dataset &dataset) const
@@ -100,4 +156,39 @@ void ShallowNetwork::apply_gradient(
         parameters_[i] -=
             learning_rate * gradient_sum[i] * inverse_count;
     }
+}
+
+std::size_t ShallowNetwork::input_dimension() const noexcept
+{
+    return input_dimension_;
+}
+
+std::size_t ShallowNetwork::hidden_dimension() const noexcept
+{
+    return hidden_dimension_;
+}
+
+std::size_t ShallowNetwork::parameter_count() const noexcept
+{
+    return parameters_.size();
+}
+
+std::size_t ShallowNetwork::w1_index(std::size_t hidden, std::size_t input) const noexcept
+{
+    return hidden * input_dimension_ + input;
+}
+
+std::size_t ShallowNetwork::b1_index(std::size_t hidden) const noexcept
+{
+    return hidden_dimension_ * input_dimension_ + hidden;
+}
+
+std::size_t ShallowNetwork::w2_index(std::size_t hidden) const noexcept
+{
+    return hidden_dimension_ * input_dimension_ + hidden_dimension_ + hidden;
+}
+
+std::size_t ShallowNetwork::b2_index() const noexcept
+{
+    return hidden_dimension_ * input_dimension_ + hidden_dimension_ + hidden_dimension_;
 }
