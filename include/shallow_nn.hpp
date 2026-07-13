@@ -16,7 +16,7 @@ struct TrainingStatistics
 class ShallowNetwork
 {
 public:
-    ShallowNetwork(std::size_t input_dimension, std::size_t hidden_dimension, std::uint32_t seed);
+    ShallowNetwork(std::size_t input_dimension, std::size_t hidden_dimension, std::size_t output_dimension, std::uint32_t seed);
 
     float predict_probability(const std::vector<float> &features) const;
 
@@ -32,6 +32,7 @@ public:
 
     std::size_t input_dimension() const noexcept;
     std::size_t hidden_dimension() const noexcept;
+    std::size_t output_dimension() const noexcept;
     std::size_t parameter_count() const noexcept;
 
 private:
@@ -42,5 +43,6 @@ private:
 
     std::size_t input_dimension_;
     std::size_t hidden_dimension_;
+    std::size_t output_dimension_;
     std::vector<float> parameters_;
 };

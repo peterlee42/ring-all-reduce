@@ -13,6 +13,7 @@ int main()
     {
         constexpr std::size_t input_dimension = 2;
         constexpr std::size_t hidden_dimension = 8;
+        constexpr std::size_t output_dimension = 1; // Binary classification (single output neuron)
         constexpr std::uint32_t seed = 42;
         constexpr float learning_rate = 0.01F;
         constexpr std::size_t maximum_rounds = 1000;
@@ -24,6 +25,7 @@ int main()
         ShallowNetwork model(
             input_dimension,
             hidden_dimension,
+            output_dimension,
             seed);
 
         for (std::size_t round = 0; round < maximum_rounds; ++round)
