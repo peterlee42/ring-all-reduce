@@ -7,7 +7,7 @@
 struct Example
 {
     std::vector<float> features;
-    float label;
+    std::size_t label;
 };
 
 class Dataset

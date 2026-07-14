@@ -16,9 +16,17 @@ struct TrainingStatistics
 class ShallowNetwork
 {
 public:
-    ShallowNetwork(std::size_t input_dimension, std::size_t hidden_dimension, std::size_t output_dimension, std::uint32_t seed);
+    ShallowNetwork(
+        std::size_t input_dimension,
+        std::size_t hidden_dimension,
+        std::size_t output_dimension,
+        std::uint32_t seed);
 
-    float predict_probability(const std::vector<float> &features) const;
+    std::vector<float> predict_probabilities(
+        const std::vector<float> &features) const;
+
+    std::size_t predict_class(
+        const std::vector<float> &features) const;
 
     TrainingStatistics compute_training_statistics(
         const Dataset &dataset) const;
@@ -36,10 +44,30 @@ public:
     std::size_t parameter_count() const noexcept;
 
 private:
-    std::size_t w1_index(std::size_t hidden, std::size_t input) const noexcept;
-    std::size_t b1_index(std::size_t hidden) const noexcept;
-    std::size_t w2_index(std::size_t hidden) const noexcept;
-    std::size_t b2_index() const noexcept;
+    struct ForwardPass
+    {
+        std::vector<float> hidden_pre_activations;
+        std::vector<float> hidden_activations;
+        std::vector<float> logits;
+        std::vector<float> probabilities;
+    };
+
+    ForwardPass forward(
+        const std::vector<float> &features) const;
+
+    std::size_t w1_index(
+        std::size_t hidden,
+        std::size_t input) const noexcept;
+
+    std::size_t b1_index(
+        std::size_t hidden) const noexcept;
+
+    std::size_t w2_index(
+        std::size_t output,
+        std::size_t hidden) const noexcept;
+
+    std::size_t b2_index(
+        std::size_t output) const noexcept;
 
     std::size_t input_dimension_;
     std::size_t hidden_dimension_;

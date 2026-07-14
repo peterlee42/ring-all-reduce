@@ -4,6 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <random>
+#include <vector>
 
 // ------------ PUBLIC METHODS ------------
 
@@ -20,19 +21,19 @@ ShallowNetwork::ShallowNetwork(
     // Initialize random number generator with the provided seed (deterministic initialization)
     std::mt19937 rng(seed);
 
+    // Xavier initialization for weights and biases
     const float standard_deviation = std::sqrt(2.0f / (static_cast<float>(input_dimension) + 1.0f));
+    std::uniform_real_distribution<float> dist(-standard_deviation, standard_deviation);
 
-    std::normal_distribution<float> dist(0.0f, standard_deviation);
-
-    // Sample from normal distribution (mean=0, stddev=stddev) to initialize parameters
+    // Initialize weights and biases
     for (float &param : parameters_)
     {
         param = dist(rng);
     }
 }
 
-float ShallowNetwork::predict_probability(
-    const std::vector<float> &features) const
+// ------------ Inference ------------
+std::vector<float> ShallowNetwork::predict_probabilities(const std::vector<float> &features) const
 {
     if (features.size() != input_dimension_)
     {
@@ -52,91 +53,85 @@ float ShallowNetwork::predict_probability(
         }
 
         z1[h] = value;
-        a1[h] = value > 0.0f ? value : 0.0f;
+        a1[h] = value > 0.0f ? value : 0.0f; // ReLU activation
     }
 
-    float output_logit = parameters_[b2_index()];
+    std::vector<float> logits(output_dimension_, 0.0f);
 
-    for (std::size_t h = 0; h < hidden_dimension_; ++h)
+    for (std::size_t o = 0; o < output_dimension_; ++o)
     {
-        output_logit += parameters_[w2_index(h)] * a1[h];
+        float value = parameters_[b2_index(o)];
+
+        for (std::size_t h = 0; h < hidden_dimension_; ++h)
+        {
+            value += parameters_[w2_index(o, h)] * a1[h];
+        }
+
+        logits[o] = value; // Linear activation for output layer
     }
 
-    return 1.0f / (1.0f + std::exp(-output_logit));
+    std::vector<float> probabilities(output_dimension_);
+
+    const float maximum_logit = *std::max_element(logits.begin(), logits.end());
+
+    float exponential_sum = 0.0f;
+
+    for (std::size_t o = 0; o < output_dimension_; ++o)
+    {
+        probabilities[o] = std::exp(logits[o] - maximum_logit); // Subtract maximum logit for numerical stability
+        exponential_sum += probabilities[o];
+    }
+
+    for (float &probability : probabilities)
+    {
+        probability /= exponential_sum;
+    }
+
+    return probabilities;
 }
 
+// ------------ Training ------------
 TrainingStatistics ShallowNetwork::compute_training_statistics(
     const Dataset &dataset) const
 {
-    TrainingStatistics result{
-        std::vector<float>(parameter_count(), 0.0f),
+    if (dataset.input_dimension() != input_dimension_)
+    {
+        throw std::invalid_argument("dataset input dimension mismatch");
+    }
+
+    if (dataset.size() == 0)
+    {
+        throw std::invalid_argument("dataset is empty");
+    }
+
+    TrainingStatistics statistics{
+        std::vector<float>(parameters_.size(), 0.0f),
         0.0,
         static_cast<std::uint64_t>(dataset.size())};
 
-    constexpr float epsilon = 1.0e-7f;
+    constexpr float epsilon = 1.0e-8f;
 
     for (const Example &example : dataset.examples())
     {
-        std::vector<float> z1(hidden_dimension_, 0.0f);
-        std::vector<float> a1(hidden_dimension_, 0.0f);
-
-        for (std::size_t h = 0; h < hidden_dimension_; ++h)
+        if (example.features.size() != input_dimension_)
         {
-            float value = parameters_[b1_index(h)];
-
-            for (std::size_t d = 0; d < input_dimension_; ++d)
-            {
-                value += parameters_[w1_index(h, d)] * example.features[d];
-            }
-
-            z1[h] = value;
-            a1[h] = value > 0.0f ? value : 0.0f;
+            throw std::invalid_argument("example feature dimension mismatch");
         }
 
-        float output_logit = parameters_[b2_index()];
-
-        for (std::size_t h = 0; h < hidden_dimension_; ++h)
+        if (example.label >= output_dimension_)
         {
-            output_logit += parameters_[w2_index(h)] * a1[h];
+            throw std::invalid_argument("example label out of range");
         }
 
-        const float probability =
-            1.0f / (1.0f + std::exp(-output_logit));
+        // --------------------------------------------------------------
+        // Forward Pass
+        // --------------------------------------------------------------
+        const ForwardPass pass = forward(example.features);
 
-        const float safe_probability =
-            std::clamp(probability, epsilon, 1.0f - epsilon);
-
-        result.loss_sum +=
-            -static_cast<double>(example.label) *
-                std::log(safe_probability) -
-            static_cast<double>(1.0f - example.label) *
-                std::log(1.0f - safe_probability);
-
-        const float dz2 = probability - example.label;
-
-        for (std::size_t h = 0; h < hidden_dimension_; ++h)
-        {
-            result.gradient_sum[w2_index(h)] += dz2 * a1[h];
-        }
-
-        result.gradient_sum[b2_index()] += dz2;
-
-        for (std::size_t h = 0; h < hidden_dimension_; ++h)
-        {
-            const float da1 = dz2 * parameters_[w2_index(h)];
-            const float dz1 = z1[h] > 0.0f ? da1 : 0.0f;
-
-            result.gradient_sum[b1_index(h)] += dz1;
-
-            for (std::size_t d = 0; d < input_dimension_; ++d)
-            {
-                result.gradient_sum[w1_index(h, d)] +=
-                    dz1 * example.features[d];
-            }
-        }
-    }
-
-    return result;
+        // --------------------------------------------------------------
+        // Cross-entropy loss
+        // --------------------------------------------------------------
+    };
 }
 
 void ShallowNetwork::apply_gradient(
@@ -144,24 +139,7 @@ void ShallowNetwork::apply_gradient(
     std::uint64_t sample_count,
     float learning_rate)
 {
-    if (gradient_sum.size() != parameters_.size())
-    {
-        throw std::invalid_argument("Gradient dimension mismatch");
-    }
-
-    if (sample_count == 0)
-    {
-        throw std::invalid_argument("Sample count must be greater than zero");
-    }
-
-    const float inverse_count =
-        1.0f / static_cast<float>(sample_count);
-
-    for (std::size_t i = 0; i < parameters_.size(); ++i)
-    {
-        parameters_[i] -=
-            learning_rate * gradient_sum[i] * inverse_count;
-    }
+    return;
 }
 
 const std::vector<float> &ShallowNetwork::parameters() const noexcept
@@ -179,6 +157,11 @@ std::size_t ShallowNetwork::hidden_dimension() const noexcept
     return hidden_dimension_;
 }
 
+std::size_t ShallowNetwork::output_dimension() const noexcept
+{
+    return output_dimension_;
+}
+
 std::size_t ShallowNetwork::parameter_count() const noexcept
 {
     return parameters_.size();
@@ -193,15 +176,85 @@ std::size_t ShallowNetwork::w1_index(std::size_t hidden, std::size_t input) cons
 
 std::size_t ShallowNetwork::b1_index(std::size_t hidden) const noexcept
 {
-    return hidden_dimension_ * input_dimension_ + hidden;
+    const std::size_t w1_size =
+        hidden_dimension_ * input_dimension_;
+
+    return w1_size + hidden;
 }
 
-std::size_t ShallowNetwork::w2_index(std::size_t hidden) const noexcept
+std::size_t ShallowNetwork::w2_index(std::size_t output, std::size_t hidden) const noexcept
 {
-    return hidden_dimension_ * input_dimension_ + hidden_dimension_ + hidden;
+    const std::size_t w1_size =
+        hidden_dimension_ * input_dimension_;
+
+    const std::size_t b1_size =
+        hidden_dimension_;
+
+    return w1_size + b1_size + output * hidden_dimension_ + hidden;
 }
 
-std::size_t ShallowNetwork::b2_index() const noexcept
+std::size_t ShallowNetwork::b2_index(std::size_t output) const noexcept
 {
-    return hidden_dimension_ * input_dimension_ + hidden_dimension_ + hidden_dimension_;
+    const std::size_t w1_size =
+        hidden_dimension_ * input_dimension_;
+
+    const std::size_t b1_size =
+        hidden_dimension_;
+
+    const std::size_t w2_size =
+        output_dimension_ * hidden_dimension_;
+
+    return w1_size + b1_size + w2_size + output;
+}
+
+ShallowNetwork::ForwardPass ShallowNetwork::forward(const std::vector<float> &features) const
+{
+    ShallowNetwork::ForwardPass pass;
+
+    pass.hidden_pre_activations.resize(hidden_dimension_);
+    pass.hidden_activations.resize(hidden_dimension_);
+    pass.logits.resize(output_dimension_);
+    pass.probabilities.resize(output_dimension_);
+
+    for (std::size_t h = 0; h < hidden_dimension_; ++h)
+    {
+        float value{parameters_[b1_index(h)]};
+
+        for (std::size_t d = 0; d < input_dimension_; ++d)
+        {
+            value += parameters_[w1_index(h, d)] * features[d];
+        }
+
+        pass.hidden_pre_activations[h] = value;
+        pass.hidden_activations[h] = value > 0.0f ? value : 0.0f; // ReLU activation
+    }
+
+    for (std::size_t o = 0; o < output_dimension_; ++o)
+    {
+        float value = parameters_[b2_index(o)];
+
+        for (std::size_t h = 0; h < hidden_dimension_; ++h)
+        {
+            value += parameters_[w2_index(o, h)] * pass.hidden_activations[h];
+        }
+
+        pass.logits[o] = value; // Linear activation for output layer
+    }
+
+    const float maximum_logit = *std::max_element(pass.logits.begin(), pass.logits.end());
+
+    float exponential_sum = 0.0f;
+
+    for (std::size_t o = 0; o < output_dimension_; ++o)
+    {
+        pass.probabilities[o] = std::exp(pass.logits[o] - maximum_logit); // Subtract maximum logit for numerical stability
+        exponential_sum += pass.probabilities[o];
+    }
+
+    for (float &probability : pass.probabilities)
+    {
+        probability /= exponential_sum;
+    }
+
+    return pass;
 }
