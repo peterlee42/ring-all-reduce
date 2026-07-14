@@ -1,0 +1,127 @@
+# Build directories
+
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+/bin/
+/lib/
+
+# CMake-generated files
+
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+compile_commands.json
+install_manifest.txt
+CMakeUserPresets.json
+
+# Compiled object files
+
+*.o
+*.obj
+*.lo
+*.slo
+
+# Precompiled headers
+
+*.gch
+*.pch
+
+# Libraries
+
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Executables
+
+*.exe
+*.out
+*.app
+/coordinator
+/worker
+
+# Debug information
+
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Dependency files
+
+*.d
+
+# Test and coverage output
+
+Testing/
+coverage/
+*.gcda
+*.gcno
+*.gcov
+*.profraw
+*.profdata
+*.lcov
+
+# Sanitizer and Valgrind output
+
+asan.log*
+ubsan.log*
+lsan.log*
+tsan.log*
+valgrind.log*
+vgcore.*
+
+# Runtime output
+
+*.log
+logs/
+tmp/
+temp/
+*.pid
+core
+core.*
+
+# Generated datasets and model output
+
+/data/generated/
+/data/shards/
+/checkpoints/
+/results/
+*.model
+*.weights
+
+# Python helper scripts
+
+**pycache**/
+*.py[cod]
+.venv/
+venv/
+
+# IDE and editor files
+
+.vscode/
+.idea/
+.vs/
+.cache/
+.clangd/
+*.swp
+*.swo
+*~
+.project
+.cproject
+.settings/
+
+# Operating system files
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
