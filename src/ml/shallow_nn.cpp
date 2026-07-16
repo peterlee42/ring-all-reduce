@@ -1,4 +1,4 @@
-#include "shallow_nn.hpp"
+#include "ml/shallow_nn.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -8,7 +8,7 @@
 
 // ------------ PUBLIC METHODS ------------
 
-ShallowNetwork::ShallowNetwork(
+ml::ShallowNetwork::ShallowNetwork(
     std::size_t input_dimension,
     std::size_t hidden_dimension,
     std::size_t output_dimension,
@@ -33,7 +33,7 @@ ShallowNetwork::ShallowNetwork(
 }
 
 // ------------ Inference ------------
-std::vector<float> ShallowNetwork::predict_probabilities(const std::vector<float> &features) const
+std::vector<float> ml::ShallowNetwork::predict_probabilities(const std::vector<float> &features) const
 {
     if (features.size() != input_dimension_)
     {
@@ -91,14 +91,14 @@ std::vector<float> ShallowNetwork::predict_probabilities(const std::vector<float
 }
 
 //------------ Inference ------------
-std::size_t ShallowNetwork::predict_class(const std::vector<float> &features) const
+std::size_t ml::ShallowNetwork::predict_class(const std::vector<float> &features) const
 {
     const std::vector<float> probabilities = predict_probabilities(features);
     return std::distance(probabilities.begin(), std::max_element(probabilities.begin(), probabilities.end()));
 }
 
 // ------------ Training ------------
-TrainingStatistics ShallowNetwork::compute_training_statistics(
+ml::TrainingStatistics ml::ShallowNetwork::compute_training_statistics(
     const Dataset &dataset) const
 {
     if (dataset.input_dimension() != input_dimension_)
@@ -111,7 +111,7 @@ TrainingStatistics ShallowNetwork::compute_training_statistics(
         throw std::invalid_argument("dataset is empty");
     }
 
-    TrainingStatistics statistics{
+    ml::TrainingStatistics statistics{
         std::vector<float>(parameters_.size(), 0.0f),
         0.0,
         static_cast<std::uint64_t>(dataset.size())};
@@ -206,7 +206,7 @@ TrainingStatistics ShallowNetwork::compute_training_statistics(
     return statistics;
 }
 
-void ShallowNetwork::apply_gradient(
+void ml::ShallowNetwork::apply_gradient(
     const std::vector<float> &gradient_sum,
     std::uint64_t sample_count,
     float learning_rate)
@@ -229,38 +229,38 @@ void ShallowNetwork::apply_gradient(
     }
 }
 
-const std::vector<float> &ShallowNetwork::parameters() const noexcept
+const std::vector<float> &ml::ShallowNetwork::parameters() const noexcept
 {
     return parameters_;
 }
 
-std::size_t ShallowNetwork::input_dimension() const noexcept
+std::size_t ml::ShallowNetwork::input_dimension() const noexcept
 {
     return input_dimension_;
 }
 
-std::size_t ShallowNetwork::hidden_dimension() const noexcept
+std::size_t ml::ShallowNetwork::hidden_dimension() const noexcept
 {
     return hidden_dimension_;
 }
 
-std::size_t ShallowNetwork::output_dimension() const noexcept
+std::size_t ml::ShallowNetwork::output_dimension() const noexcept
 {
     return output_dimension_;
 }
 
-std::size_t ShallowNetwork::parameter_count() const noexcept
+std::size_t ml::ShallowNetwork::parameter_count() const noexcept
 {
     return parameters_.size();
 }
 
 // ------------ PRIVATE METHODS ------------
-std::size_t ShallowNetwork::w1_index(std::size_t hidden, std::size_t input) const noexcept
+std::size_t ml::ShallowNetwork::w1_index(std::size_t hidden, std::size_t input) const noexcept
 {
     return hidden * input_dimension_ + input;
 }
 
-std::size_t ShallowNetwork::b1_index(std::size_t hidden) const noexcept
+std::size_t ml::ShallowNetwork::b1_index(std::size_t hidden) const noexcept
 {
     const std::size_t w1_size =
         hidden_dimension_ * input_dimension_;
@@ -268,7 +268,7 @@ std::size_t ShallowNetwork::b1_index(std::size_t hidden) const noexcept
     return w1_size + hidden;
 }
 
-std::size_t ShallowNetwork::w2_index(std::size_t output, std::size_t hidden) const noexcept
+std::size_t ml::ShallowNetwork::w2_index(std::size_t output, std::size_t hidden) const noexcept
 {
     const std::size_t w1_size =
         hidden_dimension_ * input_dimension_;
@@ -279,7 +279,7 @@ std::size_t ShallowNetwork::w2_index(std::size_t output, std::size_t hidden) con
     return w1_size + b1_size + output * hidden_dimension_ + hidden;
 }
 
-std::size_t ShallowNetwork::b2_index(std::size_t output) const noexcept
+std::size_t ml::ShallowNetwork::b2_index(std::size_t output) const noexcept
 {
     const std::size_t w1_size =
         hidden_dimension_ * input_dimension_;
@@ -293,7 +293,7 @@ std::size_t ShallowNetwork::b2_index(std::size_t output) const noexcept
     return w1_size + b1_size + w2_size + output;
 }
 
-ShallowNetwork::ForwardPass ShallowNetwork::forward(const std::vector<float> &features) const
+ml::ShallowNetwork::ForwardPass ml::ShallowNetwork::forward(const std::vector<float> &features) const
 {
     ShallowNetwork::ForwardPass pass;
 

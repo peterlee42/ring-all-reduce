@@ -1,11 +1,11 @@
-#include "dataset.hpp"
+#include "ml/dataset.hpp"
 
 #include <fstream>
 #include <sstream>
 
 // ------------ Dataset ------------
 
-Dataset Dataset::load_csv(
+ml::Dataset ml::Dataset::load_csv(
     const std::string &path,
     std::size_t input_dimension)
 {
@@ -54,22 +54,22 @@ Dataset Dataset::load_csv(
     return dataset;
 }
 
-Dataset::Dataset(std::vector<Example> examples, std::size_t input_dimension)
+ml::Dataset::Dataset(std::vector<Example> examples, std::size_t input_dimension)
     : examples_(std::move(examples)), input_dimension_(input_dimension)
 {
 }
 
-const std::vector<Example> &Dataset::examples() const noexcept
+const std::vector<ml::Example> &ml::Dataset::examples() const noexcept
 {
     return examples_;
 }
 
-std::size_t Dataset::size() const noexcept
+std::size_t ml::Dataset::size() const noexcept
 {
     return examples_.size();
 }
 
-std::size_t Dataset::input_dimension() const noexcept
+std::size_t ml::Dataset::input_dimension() const noexcept
 {
     return input_dimension_;
 }

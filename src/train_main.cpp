@@ -1,12 +1,11 @@
-#include "shallow_nn.hpp"
-#include "dataset.hpp"
+#include "ml/shallow_nn.hpp"
+#include "ml/dataset.hpp"
 
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
-#include <iomanip>
 
 int main(int argc, char *argv[])
 {
@@ -23,9 +22,9 @@ int main(int argc, char *argv[])
         constexpr std::size_t hidden_dimension = 32;
         constexpr std::size_t output_dimension = 10;
         constexpr std::uint32_t seed = 42;
-        constexpr float learning_rate = 0.05f;
-        constexpr std::size_t maximum_rounds = 1500;
-        constexpr double loss_threshold = 0.001;
+        constexpr float learning_rate = 0.01f;
+        constexpr std::size_t maximum_rounds = 1000;
+        constexpr double loss_threshold = 1e-4;
 
         const Dataset dataset =
             Dataset::load_csv(csv_path, input_dimension);
@@ -69,30 +68,6 @@ int main(int argc, char *argv[])
                 statistics.gradient_sum,
                 statistics.sample_count,
                 learning_rate);
-        }
-
-        std::cout << "training complete\n";
-        std::cout << "\nmodel parameters:\n";
-
-        const std::vector<float> &parameters = model.parameters();
-
-        constexpr std::size_t parameters_per_row = 4;
-        constexpr int index_width = 5;
-        constexpr int value_width = 14;
-        constexpr int decimal_places = 6;
-
-        std::cout << std::fixed << std::setprecision(decimal_places);
-
-        for (std::size_t i = 0; i < parameters.size(); ++i)
-        {
-            std::cout
-                << "param[" << std::setw(index_width) << i << "] = "
-                << std::setw(value_width) << parameters[i];
-
-            const bool end_of_row = (i + 1) % parameters_per_row == 0;
-            const bool last_parameter = i + 1 == parameters.size();
-
-            std::cout << (end_of_row || last_parameter ? "\n" : "    ");
         }
 
         return 0;
