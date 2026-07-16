@@ -16,7 +16,7 @@ ShallowNetwork::ShallowNetwork(
     : input_dimension_(input_dimension),
       hidden_dimension_(hidden_dimension),
       output_dimension_(output_dimension),
-      parameters_(hidden_dimension * input_dimension + hidden_dimension + hidden_dimension + 1, 0.0f)
+      parameters_(hidden_dimension * input_dimension + hidden_dimension + hidden_dimension * output_dimension + output_dimension, 0.0f)
 {
     // Initialize random number generator with the provided seed (deterministic initialization)
     std::mt19937 rng(seed);
@@ -211,7 +211,22 @@ void ShallowNetwork::apply_gradient(
     std::uint64_t sample_count,
     float learning_rate)
 {
-    return;
+    if (gradient_sum.size() != parameters_.size())
+    {
+        throw std::invalid_argument("gradient dimension mismatch");
+    }
+
+    if (sample_count == 0)
+    {
+        throw std::invalid_argument("sample count is zero");
+    }
+
+    const float scale = learning_rate / static_cast<float>(sample_count);
+
+    for (std::size_t i = 0; i < parameters_.size(); ++i)
+    {
+        parameters_[i] -= scale * gradient_sum[i];
+    }
 }
 
 const std::vector<float> &ShallowNetwork::parameters() const noexcept
@@ -240,52 +255,6 @@ std::size_t ShallowNetwork::parameter_count() const noexcept
 }
 
 // ------------ PRIVATE METHODS ------------
-ShallowNetwork::ForwardPass ShallowNetwork::forward(
-    const std::vector<float> &features) const
-{
-    ShallowNetwork::ForwardPass forward;
-
-    for (std::size_t hidden = 0; hidden < hidden_dimension_; ++hidden)
-    {
-        for (std::size_t input = 0; input < input_dimension_; ++input)
-        {
-            forward.hidden_pre_activations[hidden] += parameters_[w1_index(hidden, input)] * features[input];
-        }
-    }
-
-    for (std::size_t hidden = 0; hidden < hidden_dimension_; ++hidden)
-    {
-        // ReLU activation
-        forward.hidden_activations[hidden] = std::max(0.0f, forward.hidden_pre_activations[hidden]);
-    }
-
-    for (std::size_t output = 0; output < output_dimension_; ++output)
-    {
-        for (std::size_t hidden = 0; hidden < hidden_dimension_; ++hidden)
-        {
-            forward.logits[output] += parameters_[w2_index(output, hidden)] * forward.hidden_activations[hidden];
-        }
-    }
-
-    const float maximum_logit = *std::max_element(forward.logits.begin(), forward.logits.end());
-    float exponential_sum = 0.0f;
-
-    for (std::size_t output = 0; output < output_dimension_; ++output)
-    {
-        // Subtract maximum logit for numerical stability
-        forward.probabilities[output] = std::exp(forward.logits[output] - maximum_logit);
-        exponential_sum += forward.probabilities[output];
-    }
-
-    // Softmax normalization
-    for (std::size_t output = 0; output < output_dimension_; ++output)
-    {
-        forward.probabilities[output] /= exponential_sum;
-    }
-
-    return forward;
-}
-
 std::size_t ShallowNetwork::w1_index(std::size_t hidden, std::size_t input) const noexcept
 {
     return hidden * input_dimension_ + input;

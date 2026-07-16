@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(train_local
-    src/main.cpp
+    src/train_main.cpp
     src/shallow_nn.cpp
     src/dataset.cpp
 )

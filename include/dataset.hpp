@@ -23,7 +23,6 @@ public:
 
 private:
     Dataset(std::vector<Example> examples, std::size_t input_dimension);
-
     std::vector<Example> examples_;
     std::size_t input_dimension_;
 };

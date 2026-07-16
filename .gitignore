@@ -125,3 +125,6 @@ venv/
 .LSOverride
 Thumbs.db
 Desktop.ini
+
+# Data
+src/data/
