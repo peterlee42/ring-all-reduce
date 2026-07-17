@@ -9,7 +9,7 @@ namespace distributed
 {
     inline constexpr std::uint32_t protocol_magic = 0x52414C52; // "RALR" in ASCII
     inline constexpr std::uint16_t protocol_version = 1U;
-    inline constexpr std::size_t message_header_size = 36U; // 36 bytes
+    inline constexpr std::size_t message_header_size = 30U; // 30 bytes
 
     inline constexpr std::uint32_t max_payload_size = 16U * 1024U * 1024U; // 16 MB
 
