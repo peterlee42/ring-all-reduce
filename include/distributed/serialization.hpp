@@ -23,5 +23,4 @@ namespace distributed
     void append_float_vector(ByteBuffer &buffer, const std::vector<float> &values);
     std::vector<float> read_float_vector(const ByteBuffer &buffer, std::size_t &offset, std::size_t count);
     ByteBuffer read_bytes(const ByteBuffer &buffer, std::size_t &offset, std::size_t count);
-    std::vector<float> deserialize_float_vector(const ByteBuffer &buffer, std::size_t &offset, std::size_t count);
 }

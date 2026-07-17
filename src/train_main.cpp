@@ -19,17 +19,17 @@ int main(int argc, char *argv[])
         const std::string csv_path = argv[1];
 
         constexpr std::size_t input_dimension = 64;
-        constexpr std::size_t hidden_dimension = 32;
+        constexpr std::size_t hidden_dimension = 64;
         constexpr std::size_t output_dimension = 10;
         constexpr std::uint32_t seed = 42;
-        constexpr float learning_rate = 0.01f;
-        constexpr std::size_t maximum_rounds = 1000;
-        constexpr double loss_threshold = 1e-4;
+        constexpr float learning_rate = 0.05f;
+        constexpr std::size_t maximum_rounds = 500;
+        constexpr double loss_threshold = 0.01;
 
-        const Dataset dataset =
-            Dataset::load_csv(csv_path, input_dimension);
+        const ml::Dataset dataset =
+            ml::Dataset::load_csv(csv_path, input_dimension);
 
-        ShallowNetwork model(
+        ml::ShallowNetwork model(
             input_dimension,
             hidden_dimension,
             output_dimension,
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 
         for (std::size_t round = 0; round < maximum_rounds; ++round)
         {
-            const TrainingStatistics statistics =
+            const ml::TrainingStatistics statistics =
                 model.compute_training_statistics(dataset);
 
             const double mean_loss =
