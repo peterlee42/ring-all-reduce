@@ -52,16 +52,15 @@ namespace distributed
     struct Message
     {
         MessageHeader header;
-        Buffer payload;
+        ByteBuffer payload;
     };
 
     bool is_valid_message_type(std::uint16_t value) noexcept;
     bool is_valid_phase(std::uint16_t value) noexcept;
 
-    Buffer serialize_header(const MessageHeader &header);
-    MessageHeader deserialize_header(const Buffer &buffer, std::size_t &offset);
+    ByteBuffer serialize_header(const MessageHeader &header);
+    MessageHeader deserialize_header(const ByteBuffer &buffer, std::size_t &offset);
 
-    Buffer serialize_message(const Message &message);
-    Message deserialize_message(const Buffer &buffer, std::size_t &offset);
-
+    ByteBuffer serialize_message(const Message &message);
+    Message deserialize_message(const ByteBuffer &buffer, std::size_t &offset);
 }
