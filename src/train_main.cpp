@@ -1,5 +1,5 @@
-#include "dataset.hpp"
-#include "shallow_nn.hpp"
+#include "ml/shallow_nn.hpp"
+#include "ml/dataset.hpp"
 
 #include <cmath>
 #include <cstddef>
@@ -7,20 +7,27 @@
 #include <iostream>
 #include <stdexcept>
 
-int main()
+int main(int argc, char *argv[])
 {
     try
     {
-        constexpr std::size_t input_dimension = 2;
-        constexpr std::size_t hidden_dimension = 8;
-        constexpr std::size_t output_dimension = 1; // Binary classification (single output neuron)
+        if (argc < 2)
+        {
+            throw std::runtime_error("Usage: train_main <path_to_csv>");
+        }
+
+        const std::string csv_path = argv[1];
+
+        constexpr std::size_t input_dimension = 64;
+        constexpr std::size_t hidden_dimension = 32;
+        constexpr std::size_t output_dimension = 10;
         constexpr std::uint32_t seed = 42;
-        constexpr float learning_rate = 0.01F;
+        constexpr float learning_rate = 0.01f;
         constexpr std::size_t maximum_rounds = 1000;
-        constexpr double loss_threshold = 0.05;
+        constexpr double loss_threshold = 1e-4;
 
         const Dataset dataset =
-            Dataset::load_csv("data/sample.csv", input_dimension);
+            Dataset::load_csv(csv_path, input_dimension);
 
         ShallowNetwork model(
             input_dimension,
@@ -50,7 +57,7 @@ int main()
                     << '\n';
             }
 
-            if (mean_loss <= loss_threshold)
+            if (mean_loss < loss_threshold)
             {
                 std::cout
                     << "training complete: loss threshold reached\n";
