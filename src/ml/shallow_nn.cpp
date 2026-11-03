@@ -4,7 +4,21 @@
 #include <cmath>
 #include <stdexcept>
 #include <random>
+#include <limits>
 #include <vector>
+
+namespace
+{
+    std::size_t parameter_count(std::size_t input, std::size_t hidden, std::size_t output)
+    {
+        if (input == 0 || hidden == 0 || output < 2)
+            throw std::invalid_argument("Network needs positive input/hidden dimensions and at least two classes");
+        const auto maximum = std::numeric_limits<std::size_t>::max();
+        if (output == maximum || input > maximum - output - 1 || hidden > (maximum - output) / (input + output + 1))
+            throw std::invalid_argument("Network parameter count overflows");
+        return hidden * (input + output + 1) + output;
+    }
+}
 
 // ------------ PUBLIC METHODS ------------
 
@@ -16,8 +30,10 @@ ml::ShallowNetwork::ShallowNetwork(
     : input_dimension_(input_dimension),
       hidden_dimension_(hidden_dimension),
       output_dimension_(output_dimension),
-      parameters_(hidden_dimension * input_dimension + hidden_dimension + hidden_dimension * output_dimension + output_dimension, 0.0f)
+      parameters_(::parameter_count(input_dimension, hidden_dimension, output_dimension), 0.0f)
 {
+    if (input_dimension == 0 || hidden_dimension == 0 || output_dimension < 2)
+        throw std::invalid_argument("Network needs positive input/hidden dimensions and at least two classes");
     // Initialize random number generator with the provided seed (deterministic initialization)
     std::mt19937 rng(seed);
 
@@ -36,58 +52,10 @@ ml::ShallowNetwork::ShallowNetwork(
 std::vector<float> ml::ShallowNetwork::predict_probabilities(const std::vector<float> &features) const
 {
     if (features.size() != input_dimension_)
-    {
         throw std::invalid_argument("feature dimension mismatch");
-    }
-
-    std::vector<float> z1(hidden_dimension_, 0.0f);
-    std::vector<float> a1(hidden_dimension_, 0.0f);
-
-    for (std::size_t h = 0; h < hidden_dimension_; ++h)
-    {
-        float value = parameters_[b1_index(h)];
-
-        for (std::size_t d = 0; d < input_dimension_; ++d)
-        {
-            value += parameters_[w1_index(h, d)] * features[d];
-        }
-
-        z1[h] = value;
-        a1[h] = value > 0.0f ? value : 0.0f; // ReLU activation
-    }
-
-    std::vector<float> logits(output_dimension_, 0.0f);
-
-    for (std::size_t o = 0; o < output_dimension_; ++o)
-    {
-        float value = parameters_[b2_index(o)];
-
-        for (std::size_t h = 0; h < hidden_dimension_; ++h)
-        {
-            value += parameters_[w2_index(o, h)] * a1[h];
-        }
-
-        logits[o] = value; // Linear activation for output layer
-    }
-
-    std::vector<float> probabilities(output_dimension_);
-
-    const float maximum_logit = *std::max_element(logits.begin(), logits.end());
-
-    float exponential_sum = 0.0f;
-
-    for (std::size_t o = 0; o < output_dimension_; ++o)
-    {
-        probabilities[o] = std::exp(logits[o] - maximum_logit); // Subtract maximum logit for numerical stability
-        exponential_sum += probabilities[o];
-    }
-
-    for (float &probability : probabilities)
-    {
-        probability /= exponential_sum;
-    }
-
-    return probabilities;
+    for (const auto value : features)
+        if (!std::isfinite(value)) throw std::invalid_argument("Non-finite feature");
+    return forward(features).probabilities;
 }
 
 //------------ Inference ------------
@@ -104,11 +72,6 @@ ml::TrainingStatistics ml::ShallowNetwork::compute_training_statistics(
     if (dataset.input_dimension() != input_dimension_)
     {
         throw std::invalid_argument("dataset input dimension mismatch");
-    }
-
-    if (dataset.size() == 0)
-    {
-        throw std::invalid_argument("dataset is empty");
     }
 
     ml::TrainingStatistics statistics{
@@ -221,6 +184,14 @@ void ml::ShallowNetwork::apply_gradient(
         throw std::invalid_argument("sample count is zero");
     }
 
+    if (!std::isfinite(learning_rate) || learning_rate <= 0.0f)
+        throw std::invalid_argument("Learning rate must be finite and positive");
+    for (std::size_t i = 0; i < parameters_.size(); ++i)
+    {
+        const float next = parameters_[i] - learning_rate / static_cast<float>(sample_count) * gradient_sum[i];
+        if (!std::isfinite(gradient_sum[i]) || !std::isfinite(next))
+            throw std::invalid_argument("Non-finite gradient or parameter update");
+    }
     const float scale = learning_rate / static_cast<float>(sample_count);
 
     for (std::size_t i = 0; i < parameters_.size(); ++i)

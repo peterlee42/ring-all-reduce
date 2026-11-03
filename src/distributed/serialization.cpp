@@ -49,7 +49,7 @@ void distributed::append_double(ByteBuffer &buffer, double value)
 
 std::uint16_t distributed::read_uint16(const ByteBuffer &buffer, std::size_t &offset)
 {
-    if (offset + 2 > buffer.size())
+    if (offset > buffer.size() || 2 > buffer.size() - offset)
     {
         throw std::out_of_range("Buffer overflow while reading uint16_t");
     }
@@ -62,7 +62,7 @@ std::uint16_t distributed::read_uint16(const ByteBuffer &buffer, std::size_t &of
 
 std::uint32_t distributed::read_uint32(const ByteBuffer &buffer, std::size_t &offset)
 {
-    if (offset + 4 > buffer.size())
+    if (offset > buffer.size() || 4 > buffer.size() - offset)
     {
         throw std::out_of_range("Buffer overflow while reading uint32_t");
     }
@@ -77,7 +77,7 @@ std::uint32_t distributed::read_uint32(const ByteBuffer &buffer, std::size_t &of
 
 std::uint64_t distributed::read_uint64(const ByteBuffer &buffer, std::size_t &offset)
 {
-    if (offset + 8 > buffer.size())
+    if (offset > buffer.size() || 8 > buffer.size() - offset)
     {
         throw std::out_of_range("Buffer overflow while reading uint64_t");
     }
@@ -120,6 +120,10 @@ void distributed::append_float_vector(ByteBuffer &buffer, const std::vector<floa
 
 std::vector<float> distributed::read_float_vector(const ByteBuffer &buffer, std::size_t &offset, std::size_t count)
 {
+    if (offset > buffer.size() || count > (buffer.size() - offset) / 4)
+    {
+        throw std::out_of_range("Buffer overflow while reading float vector");
+    }
     std::vector<float> values;
     values.reserve(count);
     for (std::size_t i = 0; i < count; ++i)
@@ -131,7 +135,7 @@ std::vector<float> distributed::read_float_vector(const ByteBuffer &buffer, std:
 
 distributed::ByteBuffer distributed::read_bytes(const ByteBuffer &buffer, std::size_t &offset, std::size_t count)
 {
-    if (offset + count > buffer.size())
+    if (offset > buffer.size() || count > buffer.size() - offset)
     {
         throw std::out_of_range("Buffer overflow while reading bytes");
     }

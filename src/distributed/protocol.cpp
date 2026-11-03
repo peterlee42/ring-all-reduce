@@ -1,6 +1,8 @@
 #include "distributed/protocol.hpp"
 #include "distributed/serialization.hpp"
 
+#include <stdexcept>
+
 bool distributed::is_valid_message_type(std::uint16_t value) noexcept
 {
     return (value >= static_cast<std::uint16_t>(MessageType::register_worker) &&
@@ -11,6 +13,17 @@ bool distributed::is_valid_phase(std::uint16_t value) noexcept
 {
     return (value >= static_cast<std::uint16_t>(distributed::Phase::setup) &&
             value <= static_cast<std::uint16_t>(distributed::Phase::complete));
+}
+
+void distributed::validate_header(const MessageHeader &header)
+{
+    if (header.magic != protocol_magic || header.version != protocol_version ||
+        !is_valid_message_type(static_cast<std::uint16_t>(header.type)) ||
+        !is_valid_phase(static_cast<std::uint16_t>(header.phase)) ||
+        header.payload_size > max_payload_size)
+    {
+        throw std::runtime_error("Invalid protocol header");
+    }
 }
 
 distributed::ByteBuffer distributed::serialize_header(const distributed::MessageHeader &header)
@@ -50,6 +63,11 @@ distributed::MessageHeader distributed::deserialize_header(const distributed::By
 
 distributed::ByteBuffer distributed::serialize_message(const Message &message)
 {
+    validate_header(message.header);
+    if (message.header.payload_size != message.payload.size())
+    {
+        throw std::invalid_argument("Message payload size mismatch");
+    }
     distributed::ByteBuffer buffer = distributed::serialize_header(message.header);
 
     buffer.insert(buffer.end(), message.payload.begin(), message.payload.end());
@@ -61,6 +79,7 @@ distributed::Message distributed::deserialize_message(const distributed::ByteBuf
 {
     distributed::Message message;
     message.header = distributed::deserialize_header(buffer, offset);
+    validate_header(message.header);
 
     if (message.header.payload_size > 0)
     {

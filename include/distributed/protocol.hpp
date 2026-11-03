@@ -58,6 +58,9 @@ namespace distributed
     bool is_valid_message_type(std::uint16_t value) noexcept;
     bool is_valid_phase(std::uint16_t value) noexcept;
 
+    // Raw header codecs preserve fields; validate at the message/transport boundary.
+    void validate_header(const MessageHeader &header);
+
     ByteBuffer serialize_header(const MessageHeader &header);
     MessageHeader deserialize_header(const ByteBuffer &buffer, std::size_t &offset);
 

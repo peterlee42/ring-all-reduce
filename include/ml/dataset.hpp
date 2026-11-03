@@ -19,6 +19,9 @@ namespace ml
             const std::string &path,
             std::size_t input_dimension);
 
+        static Dataset from_examples(std::vector<Example> examples, std::size_t input_dimension);
+        Dataset shard(std::size_t rank, std::size_t workers) const;
+
         const std::vector<Example> &examples() const noexcept;
         std::size_t size() const noexcept;
         std::size_t input_dimension() const noexcept;

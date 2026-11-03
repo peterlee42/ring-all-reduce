@@ -1,7 +1,7 @@
 #include "distributed/protocol.hpp"
 #include "distributed/serialization.hpp"
 
-#include <gtest/gtest.h>
+#include "test_support.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -32,7 +32,7 @@ namespace
     {
         distributed::MessageHeader header{};
 
-        header.magic = 0x52415231;
+        header.magic = distributed::protocol_magic;
         header.version = 1;
         header.type = distributed::MessageType::register_worker;
         header.payload_size = payload_size;
@@ -49,15 +49,15 @@ namespace
         const distributed::MessageHeader &expected,
         const distributed::MessageHeader &actual)
     {
-        EXPECT_EQ(actual.magic, expected.magic);
-        EXPECT_EQ(actual.version, expected.version);
-        EXPECT_EQ(actual.type, expected.type);
-        EXPECT_EQ(actual.payload_size, expected.payload_size);
-        EXPECT_EQ(actual.worker_id, expected.worker_id);
-        EXPECT_EQ(actual.phase, expected.phase);
-        EXPECT_EQ(actual.step, expected.step);
-        EXPECT_EQ(actual.chunk_index, expected.chunk_index);
-        EXPECT_EQ(actual.element_count, expected.element_count);
+        CHECK_EQ(actual.magic, expected.magic);
+        CHECK_EQ(actual.version, expected.version);
+        CHECK_EQ(actual.type, expected.type);
+        CHECK_EQ(actual.payload_size, expected.payload_size);
+        CHECK_EQ(actual.worker_id, expected.worker_id);
+        CHECK_EQ(actual.phase, expected.phase);
+        CHECK_EQ(actual.step, expected.step);
+        CHECK_EQ(actual.chunk_index, expected.chunk_index);
+        CHECK_EQ(actual.element_count, expected.element_count);
     }
 
 } // namespace
@@ -66,18 +66,18 @@ namespace
 // Message type validation
 // -----------------------------------------------------------------------------
 
-TEST(MessageTypeValidation, AcceptsFirstAndLastMessageTypes)
+TEST_CASE(MessageTypeValidation, AcceptsFirstAndLastMessageTypes)
 {
-    EXPECT_TRUE(distributed::is_valid_message_type(
+    CHECK_TRUE(distributed::is_valid_message_type(
         static_cast<std::uint16_t>(
             distributed::MessageType::register_worker)));
 
-    EXPECT_TRUE(distributed::is_valid_message_type(
+    CHECK_TRUE(distributed::is_valid_message_type(
         static_cast<std::uint16_t>(
             distributed::MessageType::shutdown)));
 }
 
-TEST(MessageTypeValidation, AcceptsAllValuesInsideDeclaredRange)
+TEST_CASE(MessageTypeValidation, AcceptsAllValuesInsideDeclaredRange)
 {
     const auto first = static_cast<std::uint32_t>(
         distributed::MessageType::register_worker);
@@ -85,17 +85,17 @@ TEST(MessageTypeValidation, AcceptsAllValuesInsideDeclaredRange)
     const auto last = static_cast<std::uint32_t>(
         distributed::MessageType::shutdown);
 
-    ASSERT_LE(first, last);
+    CHECK_LE(first, last);
 
     for (std::uint32_t value = first; value <= last; ++value)
     {
-        EXPECT_TRUE(distributed::is_valid_message_type(
+        CHECK_TRUE(distributed::is_valid_message_type(
             static_cast<std::uint16_t>(value)))
             << "Unexpected invalid message type: " << value;
     }
 }
 
-TEST(MessageTypeValidation, RejectsValuesOutsideDeclaredRange)
+TEST_CASE(MessageTypeValidation, RejectsValuesOutsideDeclaredRange)
 {
     const auto first = static_cast<std::uint32_t>(
         distributed::MessageType::register_worker);
@@ -105,13 +105,13 @@ TEST(MessageTypeValidation, RejectsValuesOutsideDeclaredRange)
 
     if (first > 0)
     {
-        EXPECT_FALSE(distributed::is_valid_message_type(
+        CHECK_FALSE(distributed::is_valid_message_type(
             static_cast<std::uint16_t>(first - 1)));
     }
 
     if (last < std::numeric_limits<std::uint16_t>::max())
     {
-        EXPECT_FALSE(distributed::is_valid_message_type(
+        CHECK_FALSE(distributed::is_valid_message_type(
             static_cast<std::uint16_t>(last + 1)));
     }
 }
@@ -120,18 +120,18 @@ TEST(MessageTypeValidation, RejectsValuesOutsideDeclaredRange)
 // Phase validation
 // -----------------------------------------------------------------------------
 
-TEST(PhaseValidation, AcceptsFirstAndLastPhases)
+TEST_CASE(PhaseValidation, AcceptsFirstAndLastPhases)
 {
-    EXPECT_TRUE(distributed::is_valid_phase(
+    CHECK_TRUE(distributed::is_valid_phase(
         static_cast<std::uint16_t>(
             distributed::Phase::setup)));
 
-    EXPECT_TRUE(distributed::is_valid_phase(
+    CHECK_TRUE(distributed::is_valid_phase(
         static_cast<std::uint16_t>(
             distributed::Phase::complete)));
 }
 
-TEST(PhaseValidation, AcceptsAllValuesInsideDeclaredRange)
+TEST_CASE(PhaseValidation, AcceptsAllValuesInsideDeclaredRange)
 {
     const auto first = static_cast<std::uint32_t>(
         distributed::Phase::setup);
@@ -139,17 +139,17 @@ TEST(PhaseValidation, AcceptsAllValuesInsideDeclaredRange)
     const auto last = static_cast<std::uint32_t>(
         distributed::Phase::complete);
 
-    ASSERT_LE(first, last);
+    CHECK_LE(first, last);
 
     for (std::uint32_t value = first; value <= last; ++value)
     {
-        EXPECT_TRUE(distributed::is_valid_phase(
+        CHECK_TRUE(distributed::is_valid_phase(
             static_cast<std::uint16_t>(value)))
             << "Unexpected invalid phase: " << value;
     }
 }
 
-TEST(PhaseValidation, RejectsValuesOutsideDeclaredRange)
+TEST_CASE(PhaseValidation, RejectsValuesOutsideDeclaredRange)
 {
     const auto first = static_cast<std::uint32_t>(
         distributed::Phase::setup);
@@ -159,13 +159,13 @@ TEST(PhaseValidation, RejectsValuesOutsideDeclaredRange)
 
     if (first > 0)
     {
-        EXPECT_FALSE(distributed::is_valid_phase(
+        CHECK_FALSE(distributed::is_valid_phase(
             static_cast<std::uint16_t>(first - 1)));
     }
 
     if (last < std::numeric_limits<std::uint16_t>::max())
     {
-        EXPECT_FALSE(distributed::is_valid_phase(
+        CHECK_FALSE(distributed::is_valid_phase(
             static_cast<std::uint16_t>(last + 1)));
     }
 }
@@ -174,7 +174,7 @@ TEST(PhaseValidation, RejectsValuesOutsideDeclaredRange)
 // Header serialization
 // -----------------------------------------------------------------------------
 
-TEST(HeaderSerialization, ProducesExpectedNetworkByteOrder)
+TEST_CASE(HeaderSerialization, ProducesExpectedNetworkByteOrder)
 {
     distributed::MessageHeader header{};
 
@@ -226,11 +226,11 @@ TEST(HeaderSerialization, ProducesExpectedNetworkByteOrder)
     const ByteBuffer actual =
         distributed::serialize_header(header);
 
-    EXPECT_EQ(actual, expected);
-    EXPECT_EQ(actual.size(), distributed::message_header_size);
+    CHECK_EQ(actual, expected);
+    CHECK_EQ(actual.size(), distributed::message_header_size);
 }
 
-TEST(HeaderSerialization, RoundTripsEveryHeaderField)
+TEST_CASE(HeaderSerialization, RoundTripsEveryHeaderField)
 {
     const distributed::MessageHeader original =
         make_test_header(128);
@@ -244,10 +244,10 @@ TEST(HeaderSerialization, RoundTripsEveryHeaderField)
         distributed::deserialize_header(encoded, offset);
 
     expect_headers_equal(original, decoded);
-    EXPECT_EQ(offset, distributed::message_header_size);
+    CHECK_EQ(offset, distributed::message_header_size);
 }
 
-TEST(HeaderDeserialization, StartsReadingAtProvidedOffset)
+TEST_CASE(HeaderDeserialization, StartsReadingAtProvidedOffset)
 {
     const distributed::MessageHeader original =
         make_test_header(32);
@@ -275,12 +275,12 @@ TEST(HeaderDeserialization, StartsReadingAtProvidedOffset)
 
     expect_headers_equal(original, decoded);
 
-    EXPECT_EQ(
+    CHECK_EQ(
         offset,
         3U + distributed::message_header_size);
 }
 
-TEST(HeaderDeserialization, RejectsTruncatedHeader)
+TEST_CASE(HeaderDeserialization, RejectsTruncatedHeader)
 {
     const distributed::MessageHeader header =
         make_test_header();
@@ -288,20 +288,20 @@ TEST(HeaderDeserialization, RejectsTruncatedHeader)
     ByteBuffer encoded =
         distributed::serialize_header(header);
 
-    ASSERT_FALSE(encoded.empty());
+    CHECK_FALSE(encoded.empty());
 
     encoded.pop_back();
 
     std::size_t offset = 0;
 
-    EXPECT_ANY_THROW({
+    CHECK_ANY_THROW({
         const auto ignored =
             distributed::deserialize_header(encoded, offset);
         (void)ignored;
     });
 }
 
-TEST(HeaderDeserialization, RejectsOffsetPastEndOfBuffer)
+TEST_CASE(HeaderDeserialization, RejectsOffsetPastEndOfBuffer)
 {
     const distributed::MessageHeader header =
         make_test_header();
@@ -311,7 +311,7 @@ TEST(HeaderDeserialization, RejectsOffsetPastEndOfBuffer)
 
     std::size_t offset = encoded.size() + 1;
 
-    EXPECT_ANY_THROW({
+    CHECK_ANY_THROW({
         const auto ignored =
             distributed::deserialize_header(encoded, offset);
         (void)ignored;
@@ -322,7 +322,7 @@ TEST(HeaderDeserialization, RejectsOffsetPastEndOfBuffer)
 // Message serialization
 // -----------------------------------------------------------------------------
 
-TEST(MessageSerialization, PlacesPayloadImmediatelyAfterHeader)
+TEST_CASE(MessageSerialization, PlacesPayloadImmediatelyAfterHeader)
 {
     distributed::Message message{};
 
@@ -347,10 +347,10 @@ TEST(MessageSerialization, PlacesPayloadImmediatelyAfterHeader)
     const ByteBuffer actual =
         distributed::serialize_message(message);
 
-    EXPECT_EQ(actual, expected);
+    CHECK_EQ(actual, expected);
 }
 
-TEST(MessageSerialization, RoundTripsHeaderAndPayload)
+TEST_CASE(MessageSerialization, RoundTripsHeaderAndPayload)
 {
     distributed::Message original{};
 
@@ -374,11 +374,11 @@ TEST(MessageSerialization, RoundTripsHeaderAndPayload)
         distributed::deserialize_message(encoded, offset);
 
     expect_headers_equal(original.header, decoded.header);
-    EXPECT_EQ(decoded.payload, original.payload);
-    EXPECT_EQ(offset, encoded.size());
+    CHECK_EQ(decoded.payload, original.payload);
+    CHECK_EQ(offset, encoded.size());
 }
 
-TEST(MessageDeserialization, SupportsEmptyPayload)
+TEST_CASE(MessageDeserialization, SupportsEmptyPayload)
 {
     distributed::Message original{};
 
@@ -394,11 +394,11 @@ TEST(MessageDeserialization, SupportsEmptyPayload)
         distributed::deserialize_message(encoded, offset);
 
     expect_headers_equal(original.header, decoded.header);
-    EXPECT_TRUE(decoded.payload.empty());
-    EXPECT_EQ(offset, distributed::message_header_size);
+    CHECK_TRUE(decoded.payload.empty());
+    CHECK_EQ(offset, distributed::message_header_size);
 }
 
-TEST(MessageDeserialization, LeavesTrailingBytesUnread)
+TEST_CASE(MessageDeserialization, LeavesTrailingBytesUnread)
 {
     distributed::Message original{};
 
@@ -425,12 +425,12 @@ TEST(MessageDeserialization, LeavesTrailingBytesUnread)
         distributed::deserialize_message(buffer, offset);
 
     expect_headers_equal(original.header, decoded.header);
-    EXPECT_EQ(decoded.payload, original.payload);
-    EXPECT_EQ(offset, message_size);
-    EXPECT_LT(offset, buffer.size());
+    CHECK_EQ(decoded.payload, original.payload);
+    CHECK_EQ(offset, message_size);
+    CHECK_LT(offset, buffer.size());
 }
 
-TEST(MessageDeserialization, RejectsTruncatedPayload)
+TEST_CASE(MessageDeserialization, RejectsTruncatedPayload)
 {
     distributed::Message message{};
 
@@ -447,20 +447,20 @@ TEST(MessageDeserialization, RejectsTruncatedPayload)
     ByteBuffer encoded =
         distributed::serialize_message(message);
 
-    ASSERT_FALSE(encoded.empty());
+    CHECK_FALSE(encoded.empty());
 
     encoded.pop_back();
 
     std::size_t offset = 0;
 
-    EXPECT_ANY_THROW({
+    CHECK_ANY_THROW({
         const auto ignored =
             distributed::deserialize_message(encoded, offset);
         (void)ignored;
     });
 }
 
-TEST(MessageDeserialization, RejectsPayloadWhenNoPayloadBytesExist)
+TEST_CASE(MessageDeserialization, RejectsPayloadWhenNoPayloadBytesExist)
 {
     distributed::MessageHeader header =
         make_test_header(8);
@@ -470,14 +470,14 @@ TEST(MessageDeserialization, RejectsPayloadWhenNoPayloadBytesExist)
 
     std::size_t offset = 0;
 
-    EXPECT_ANY_THROW({
+    CHECK_ANY_THROW({
         const auto ignored =
             distributed::deserialize_message(encoded, offset);
         (void)ignored;
     });
 }
 
-TEST(MessageDeserialization, ReadsConcatenatedMessagesSequentially)
+TEST_CASE(MessageDeserialization, ReadsConcatenatedMessagesSequentially)
 {
     distributed::Message first{};
 
@@ -533,7 +533,7 @@ TEST(MessageDeserialization, ReadsConcatenatedMessagesSequentially)
         first.header,
         decoded_first.header);
 
-    EXPECT_EQ(
+    CHECK_EQ(
         decoded_first.payload,
         first.payload);
 
@@ -541,14 +541,14 @@ TEST(MessageDeserialization, ReadsConcatenatedMessagesSequentially)
         second.header,
         decoded_second.header);
 
-    EXPECT_EQ(
+    CHECK_EQ(
         decoded_second.payload,
         second.payload);
 
-    EXPECT_EQ(offset, buffer.size());
+    CHECK_EQ(offset, buffer.size());
 }
 
-TEST(MessageDeserialization, RespectsNonZeroInitialOffset)
+TEST_CASE(MessageDeserialization, RespectsNonZeroInitialOffset)
 {
     distributed::Message original{};
 
@@ -580,6 +580,28 @@ TEST(MessageDeserialization, RespectsNonZeroInitialOffset)
         distributed::deserialize_message(buffer, offset);
 
     expect_headers_equal(original.header, decoded.header);
-    EXPECT_EQ(decoded.payload, original.payload);
-    EXPECT_EQ(offset, buffer.size());
+    CHECK_EQ(decoded.payload, original.payload);
+    CHECK_EQ(offset, buffer.size());
+}
+
+TEST_CASE(MessageValidation, RejectsInvalidHeadersAndMismatchedPayload)
+{
+    distributed::Message message;
+    message.header.type = distributed::MessageType::ready;
+    message.payload = make_bytes({1, 2});
+    CHECK_THROW(distributed::serialize_message(message), std::invalid_argument);
+    message.header.payload_size = 2;
+    CHECK_NO_THROW(distributed::serialize_message(message));
+    for (int field = 0; field < 5; ++field)
+    {
+        auto header = message.header;
+        if (field == 0) header.magic = 0;
+        if (field == 1) header.version = 999;
+        if (field == 2) header.type = static_cast<distributed::MessageType>(0);
+        if (field == 3) header.phase = static_cast<distributed::Phase>(999);
+        if (field == 4) header.payload_size = distributed::max_payload_size + 1;
+        const auto encoded = distributed::serialize_header(header);
+        std::size_t offset = 0;
+        CHECK_THROW(distributed::deserialize_message(encoded, offset), std::runtime_error);
+    }
 }
